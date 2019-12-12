@@ -213,6 +213,18 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
 ###########################################################                                                          
 # Helper commands #########################################
 
+    def resetSelfVars(self): #used to reset variables in the instance of a day cycle completing or similar
+        print("Initiating resetSelfVars")
+        self.lynchActive = False
+        self.lynchSeconded = False
+        self.lynchAttempt = 2
+        #doesnt mess with self.isDay
+        self.votesAcquired = 0
+        self.votesAgainst = 0
+        self.initiatorID = 0
+        self.victimID = 0
+
+
     def replaceOldMessage(self, newMsg):#deletes old messages in self.actionRef and replaces them with the new action msgs
         print("Initiating replaceOldMessage()")
         for msg in self.actionRef:
