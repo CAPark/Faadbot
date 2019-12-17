@@ -72,3 +72,30 @@ class werewolfLogic:
         names.append(playerRight)
 
         return names
+
+    def checkNightDone(self, roleSet, killDone, protectDone, checkDone,
+        werewolfTarget, bodyguardTarget):
+        infoList = []
+        if roleSet == 'justVillagers': #TODO finish villagers
+            if killDone:
+                return True
+            else:
+                return False
+        elif roleSet == 'basicSpecials':
+            bodyguardStatus = self.werewolfSQL.checkBodyGuardStatus()
+            seerStatus = self.werewolfSQL.checkSeerStatus()
+            if bodyguardStatus: #bodyguard alive
+                protectStatus = protectDone
+            else:
+                protectStatus = True #skip check if bodyguard is dead
+            
+            if seerStatus: #seer alive
+                checkStatus = checkDone
+            else:
+                checkStatus = True #skip check if seer is dead
+            if killDone and checkStatus and protectStatus:
+                if not werewolfTarget == bodyguardTarget:
+                    self.werewolfSQL.WLkill(werewolfTarget)
+                return True
+            else:
+                return False

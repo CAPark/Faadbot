@@ -13,6 +13,7 @@ class werewolfMan(commands.Cog):
     def __init__(self,bot):
         self.bot = bot
         self.rolesAdded = False
+        self.roleSet = None
         self.lynchActive = False
         self.lynchSeconded = False
         self.lynchAttempt = 2 #counts down remaining attempts
@@ -20,15 +21,20 @@ class werewolfMan(commands.Cog):
         self.statusList = None
         self.statusRef = [] #reference to statusList message in chat for editing
         self.actionRef = [] #reference to action messages list in chat for editing
-        self.werewolfSQL = werewolfSQL()
-        self.werewolfLogic = werewolfLogic()
+        
         self.votesNeeded = 0 #number of votes needed for a vote to pass
         self.votesAcquired = 0 #current number of votes held
         self.votesAgainst = 0 #tallies votes against
         self.initiatorID = 0 #used to make sure initiator does try seconding his/her own things
         self.victimID = 0 #person vote is initiated against. Can also be set to kill victim at night
         self.protectID = 0 #person to be protected
-        self.checkID = 0 #person to be checked by seer
+
+        self.werewolfSQL = werewolfSQL()
+        self.werewolfLogic = werewolfLogic()
+
+        self.killDone = False
+        self.protectDone = False
+        self.checkDone = False
 
     @commands.command(name = 'Wstartup')
     async def Wstartup(self, ctx):
@@ -189,6 +195,31 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
             else:
                 await ctx.send("Invalid input. Please use only ``!Wlynch Second`` or ``!Wlynch Reject`` for responding to lynch requests")
 
+    @commands.command(name = 'Wkill')
+    async def Wkill(self, ctx, toKill):
+        checkPermission = self.werewolfLogic.checkNightActionPermission(
+            self.isDay, "!Wkill", ctx.message.author.id, toKill)
+        
+        permission = checkPermission[0]
+        if not permission:
+            status = checkPermission[1]
+            await ctx.send(status)
+
+        else:
+            #TODO current implementation only supports single werewolf
+            #TODO add vote system for additional werewolves
+            self.victimID = self.werewolfSQL.getPlayerid(toKill)
+            msg = "```You will kill {} tonight```".format(toKill)
+            await ctx.send(msg)
+            self.killDone = True
+
+            shouldCycle = self.werewolfLogic.checkNightDone(
+                self.roleSet, self.killDone, self.protectDone, self.checkDone,
+                self.victimID, self.protectID)
+
+            if shouldCycle:
+                self.cycleNight()
+
     @commands.command(name = 'Wprotect')
     async def Wprotect(self, ctx, toProtect):
         checkPermission = self.werewolfLogic.checkNightActionPermission(
@@ -203,6 +234,15 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
             self.protectID = self.werewolfSQL.getPlayerid(toProtect)
             msg = "```You will protect {} tonight```".format(toProtect)
             await ctx.send(msg)
+            self.protectDone = True
+
+            shouldCycle = self.werewolfLogic.checkNightDone(
+                self.roleSet, self.killDone, self.protectDone, self.checkDone,
+                self.victimID, self.protectID)
+
+            if shouldCycle:
+                self.cycleNight()
+
 
     @commands.command(name = 'Wcheck')
     async def Wcheck(self, ctx, toCheck):
@@ -226,6 +266,15 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                 msg = msg + "\nThere is no werewolf among them```"
 
         await ctx.send(msg)
+        self.checkDone = True
+
+        shouldCycle = self.werewolfLogic.checkNightDone(
+            self.roleSet, self.killDone, self.protectDone, self.checkDone,
+            self.victimID, self.protectID)
+
+        if shouldCycle:
+            self.cycleNight()
+
 
     
 
@@ -257,18 +306,23 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
 ###########################################################                                                          
 # Helper commands #########################################
 
-    def resetSelfVars(self): #used to reset variables in the instance of a day cycle completing or similar
-        print("Initiating resetSelfVars")
+    def cycleNight(self): #used to reset variables in the instance of a day cycle completing or similar
+        print("Initiating cycleNight")
         self.lynchActive = False
         self.lynchSeconded = False
         self.lynchAttempt = 2
-        #doesnt mess with self.isDay
+        
+        self.isDay = True
         self.votesAcquired = 0
         self.votesAgainst = 0
         self.initiatorID = 0
         self.victimID = 0
         self.protectID = 0
-        self.checkID = 0
+
+        self.killDone = False
+        self.protectDone = False
+        self.checkDone = False
+    
 
 
     def replaceOldMessage(self, newMsg):#deletes old messages in self.actionRef and replaces them with the new action msgs

@@ -10,6 +10,16 @@ class werewolfSQL:
         self.testUserList = "games/werewolfMod/testUserInfo.txt"
         self.dbName = "testDB" #name of sql database, change if necessary
     
+
+# Game Setup commands #####################################
+###########################################################                                                         
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+# Game Setup commands #####################################
+
     def WLstartup(self):
         #get localhost mysql password for root
         TOKEN = open(self.dbPassLoc, "r").read()
@@ -223,7 +233,82 @@ class werewolfSQL:
             cursor.close()
             connection.close
             print("****************************************************")
+
+# Game state commands #####################################
+###########################################################                                                         
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+# Game state commands #####################################
+
+    #checks if seer is alive (or exists)
+    def checkSeerStatus(self):
+        TOKEN = open(self.dbPassLoc, "r").read()
+        try:
+            connection = mysql.connector.connect(
+                host = 'localhost',
+                database = self.dbName,
+                user = 'root',
+                password = TOKEN)
+
+            if connection.is_connected():
+                cursor = connection.cursor()
+                print("****************************************************")
+                print("Accessing database to check if seer is alive\n")
+                cursor.execute("SELECT * FROM round WHERE roleName = 'seer'")
+                seer = cursor.fetchone()
+                if seer[3] == '1':
+                    alive = True
+                else: 
+                    alive = False
+        except Error as e:
+            print("Error while connecting to MySQL", e)
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+                print("****************************************************")
+                return alive
+
+    #checks if bodyguard is alive (or exists)
+    def checkBodyGuardStatus(self):
+        TOKEN = open(self.dbPassLoc, "r").read()
+        try:
+            connection = mysql.connector.connect(
+                host = 'localhost',
+                database = self.dbName,
+                user = 'root',
+                password = TOKEN)
+
+            if connection.is_connected():
+                cursor = connection.cursor()
+                print("****************************************************")
+                print("Accessing database to check if bodyguard is alive\n")
+                cursor.execute("SELECT * FROM round WHERE roleName = 'bodyguard'")
+                bodyguard = cursor.fetchone()
+                if bodyguard[3] == '1':
+                    alive = True
+                else: 
+                    alive = False
+        except Error as e:
+            print("Error while connecting to MySQL", e)
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+                print("****************************************************")
+                return alive
                 
+# SQL helper commands #####################################
+###########################################################                                                         
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+###########################################################                                                          
+# SQL helper commands #####################################
 
     #helper methods
     #returns a large string to display to players with current game information
