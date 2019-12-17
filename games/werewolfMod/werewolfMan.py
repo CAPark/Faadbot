@@ -19,6 +19,7 @@ class werewolfMan(commands.Cog):
         self.lynchAttempt = 2 #counts down remaining attempts
         self.isDay = True
         self.statusList = None
+        self.voteType = None #string to tell current vote type
         self.statusRef = [] #reference to statusList message in chat for editing
         self.actionRef = [] #reference to action messages list in chat for editing
         
@@ -28,6 +29,7 @@ class werewolfMan(commands.Cog):
         self.initiatorID = 0 #used to make sure initiator does try seconding his/her own things
         self.victimID = 0 #person vote is initiated against. Can also be set to kill victim at night
         self.protectID = 0 #person to be protected
+        self.initiator = None
 
         self.werewolfSQL = werewolfSQL()
         self.werewolfLogic = werewolfLogic()
@@ -139,6 +141,27 @@ There will be {} werewolves".format(numWerewolves))
 ###########################################################                                                          
 # Action commands #########################################
 
+    @commands.command(name = 'Wskip')
+    async def Wskip(self, ctx):
+        if not self.lynchActive:
+            msgActList = []
+            playerList = self.werewolfSQL.getPlayerList()
+            for player in playerList:
+                if ctx.message.author.id == int(player[0]):
+                    self.initiator = player[1]
+                    self.initiatorID = int(player[0])
+            Notification = "```{} has started a notion to skip day. Select a reaction \
+    to vote\nVotes for: {}\nVotes against: {}```".format(self.initiator, self.votesAcquired, self.votesAgainst)
+            for player in playerList:
+                user = self.bot.get_user(int(player[0]))
+                msg = await user.send(Notification)
+                msgActList.append(msg)
+            self.replaceOldMessage(msgActList)
+            self.voteType = "skip"
+            await self.addVoteReactions()
+        else: #cant use this while lynch attempt active
+            await ctx.send("```You can't use this while a lynch is active```")
+
     @commands.command(name = 'Wlynch')
     async def Wlynch(self, ctx, arg1):
         playerList = self.werewolfSQL.getPlayerList()
@@ -176,11 +199,13 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                     msg = await user.send(Notification)
                     msgActList.append(msg)
                 self.replaceOldMessage(msgActList)
+                self.voteType = "lynch"
                 await self.addVoteReactions()
 
             elif arg1 == "Reject" and not ctx.message.author.id == self.initiatorID:
                 self.initiatorID = 0
                 self.victimID = 0
+                self.lynchActive = False #reset bool
                 if self.lynchAttempt == 0:
                     self.isDay = False
                     self.lynchAttempt = 2
@@ -306,7 +331,7 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
 ###########################################################                                                          
 # Helper commands #########################################
 
-    def cycleNight(self): #used to reset variables in the instance of a day cycle completing or similar
+    async def cycleNight(self): #used to reset variables in the instance of a day cycle completing or similar
         print("Initiating cycleNight")
         self.lynchActive = False
         self.lynchSeconded = False
@@ -322,8 +347,19 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
         self.killDone = False
         self.protectDone = False
         self.checkDone = False
-    
 
+        playerList = self.werewolfSQL.getPlayerList()
+        for player in playerList:
+            newUI = self.werewolfSQL.makeUI(player[0], self.isDay)
+            user = self.bot.get_user(int(player[0]))
+            await user.send(newUI)
+        print("cycleNight() complete!")
+
+    
+    #def checkVictory(self): #used to check if game is over
+        #TODO: Werewolf victory
+
+        #TODO: Villager victory
 
     def replaceOldMessage(self, newMsg):#deletes old messages in self.actionRef and replaces them with the new action msgs
         print("Initiating replaceOldMessage()")
@@ -352,19 +388,16 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
             if self.votesAcquired >= self.votesNeeded:
                 print("Lynch vote has passed")
                 votePassed = True
-                self.votesAgainst = 0
-                self.votesAcquired = 0
                 self.isDay = False
-            elif self.votesAgainst >= self.votesNeeded: #vote failed
+                self.lynchActive = False
+        else:
+            self.votesAgainst += 1
+            if self.votesAgainst >= self.votesNeeded: #vote failed
                 print("Lynch vote has failed")
-                self.votesAgainst = 0
-                self.votesAcquired = 0
                 if self.lynchAttempt == 0:
                     self.isDay = False
                     self.lynchAttempt = 2
-            self.lynchActive = False
-        else:
-            self.votesAgainst += 1
+                self.lynchActive = False
         Notification = "```Notion to lynch passed. Select a reaction to vote\nVotes for: {}\nVotes against: {}".format(self.votesAcquired, self.votesAgainst)
         if votePassed:
             Notification = Notification + "\n The vote to lynch has passed. Lynching will commence..."
@@ -379,18 +412,61 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                 newUI = self.werewolfSQL.makeUI(player[0], self.isDay)
                 user = self.bot.get_user(int(player[0]))
                 await user.send(newUI)
+                self.voteType = None
         print("updateLynchMessage() complete!")
+        self.votesAcquired = 0
+        self.votesAgainst = 0
+
+    async def updateSkipMessage(self, vote):
+        print("Initiating updateSkipMessage")
+        votePassed = False
+        if vote == "yes":
+            self.votesAcquired += 1
+            if self.votesAcquired >= self.votesNeeded:
+                print("Skip vote has passed")
+                votePassed = True
+                self.isDay = False
+        else:
+            self.votesAgainst += 1
+            if self.votesAgainst >= self.votesNeeded: #vote failed
+                print("Skip vote has failed")
+        Notification = "```{} has started a notion to skip day. Select a reaction \
+to vote\nVotes for: {}\nVotes against: {}```".format(self.initiator, self.votesAcquired, self.votesAgainst)
+        if votePassed:
+            Notification = Notification + "\n The vote to Skip has passed. The day end..."
+            
+        Notification = Notification + "```"
+        for msg in self.actionRef:
+            await msg.edit(content = Notification)
+        if votePassed:
+            playerList = self.werewolfSQL.getPlayerList()
+            for player in playerList:
+                newUI = self.werewolfSQL.makeUI(player[0], self.isDay)
+                user = self.bot.get_user(int(player[0]))
+                await user.send(newUI)
+                self.voteType = None
+        print("updateSkipMessage() complete!")
+        self.votesAcquired = 0
+        self.votesAgainst = 0
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if not user.bot:
             print("Reaction detected")
-            if reaction.emoji == '✅':
-                print("Checkmark reaction detected")
-                await self.updateLynchMessage("yes")
-            elif reaction.emoji == '❌':
-                print("X mark reaction detected")
-                await self.updateLynchMessage("no")
+            for msg in self.actionRef:
+                if msg == reaction.message:
+                    if reaction.emoji == '✅':
+                        print("Checkmark reaction detected")
+                        if self.voteType == "lynch":
+                            await self.updateLynchMessage("yes")
+                        elif self.voteType == "skip":
+                            await self.updateSkipMessage("yes")
+                    elif reaction.emoji == '❌':
+                        print("X mark reaction detected")
+                        if self.voteType == "lynch":
+                            await self.updateLynchMessage("no")
+                        elif self.voteType == "skip":
+                            await self.updateSkipMessage("no")
 
 
 
