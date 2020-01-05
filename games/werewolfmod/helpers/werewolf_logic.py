@@ -1,3 +1,6 @@
+import sys
+print(sys.path)
+
 from werewolfSQL import werewolfSQL
 
 class werewolfLogic:

@@ -4,8 +4,8 @@ import importlib
 import sys, traceback
 from discord.ext import commands
 
-discordCommandDir = 'discordCommands' #storage for discord affecting modules
-botCommandDir = 'botCommands' #storage for bot related modules
+discordCommandDir = 'discordcommands' #storage for discord affecting modules
+botCommandDir = 'botcommands' #storage for bot related modules
 gamesCommandDir = 'games' #storage for game modules
 commandListFile = 'commandList.txt' #file storage for loaded modules
 commandList = []
