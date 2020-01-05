@@ -1,4 +1,4 @@
-from games.werewolfMod.helpers.werewolfSQL import werewolfSQL
+from werewolfSQL import werewolfSQL
 
 class werewolfLogic:
     def __init__(self):

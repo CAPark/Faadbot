@@ -4,8 +4,10 @@ import random
 import mysql.connector
 from mysql.connector import Error
 import math
-from games.werewolfMod.helpers.werewolfSQL import werewolfSQL
-from games.werewolfMod.helpers.werewolfLogic import werewolfLogic
+#from games.werewolfMod.helpers.werewolfSQL import werewolfSQL
+#from games.werewolfMod.helpers.werewolfLogic import werewolfLogic
+from helpers import werewolfSQL
+from helpers import werewolfLogic
 
 #currently supports a maximum of 10 players
 
@@ -151,7 +153,7 @@ There will be {} werewolves".format(numWerewolves))
                     self.initiator = player[1]
                     self.initiatorID = int(player[0])
             Notification = "```{} has started a notion to skip day. Select a reaction \
-    to vote\nVotes for: {}\nVotes against: {}```".format(self.initiator, self.votesAcquired, self.votesAgainst)
+to vote\nVotes for: {}\nVotes against: {}```".format(self.initiator, self.votesAcquired, self.votesAgainst)
             for player in playerList:
                 user = self.bot.get_user(int(player[0]))
                 msg = await user.send(Notification)
@@ -191,7 +193,7 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                 self.replaceOldMessage(msgActList)
 
         elif self.isDay and self.lynchActive:
-            if arg1 == "Second" and not ctx.message.author.id == self.initiatorID:
+            if arg1 == "Second" :#and not ctx.message.author.id == self.initiatorID:
                 Notification = "```Notion to lynch passed. Select a reaction to vote\nVotes for: {}\nVotes against: {}```".format(self.votesAcquired, self.votesAgainst)
                 self.initiatorID = 0
                 for player in playerList:
@@ -390,7 +392,7 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                 votePassed = True
                 self.isDay = False
                 self.lynchActive = False
-        else:
+        elif vote == "no":
             self.votesAgainst += 1
             if self.votesAgainst >= self.votesNeeded: #vote failed
                 print("Lynch vote has failed")
@@ -398,6 +400,11 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                     self.isDay = False
                     self.lynchAttempt = 2
                 self.lynchActive = False
+
+        elif vote == "yes2":
+            self.votesAcquired -= 1
+        elif vote == "no2":
+            self.votesAgainst -= 1
         Notification = "```Notion to lynch passed. Select a reaction to vote\nVotes for: {}\nVotes against: {}".format(self.votesAcquired, self.votesAgainst)
         if votePassed:
             Notification = Notification + "\n The vote to lynch has passed. Lynching will commence..."
@@ -426,10 +433,15 @@ someone to second this notion! (Use !Wlynch Second to second the notion or !Wlyn
                 print("Skip vote has passed")
                 votePassed = True
                 self.isDay = False
-        else:
+        elif vote == "no":
             self.votesAgainst += 1
             if self.votesAgainst >= self.votesNeeded: #vote failed
                 print("Skip vote has failed")
+
+        elif vote == "yes2":
+            self.votesAcquired -= 1
+        elif vote == "no2":
+            self.votesAgainst -= 1
         Notification = "```{} has started a notion to skip day. Select a reaction \
 to vote\nVotes for: {}\nVotes against: {}```".format(self.initiator, self.votesAcquired, self.votesAgainst)
         if votePassed:
@@ -453,20 +465,35 @@ to vote\nVotes for: {}\nVotes against: {}```".format(self.initiator, self.votesA
     async def on_reaction_add(self, reaction, user):
         if not user.bot:
             print("Reaction detected")
-            for msg in self.actionRef:
-                if msg == reaction.message:
-                    if reaction.emoji == '✅':
-                        print("Checkmark reaction detected")
-                        if self.voteType == "lynch":
-                            await self.updateLynchMessage("yes")
-                        elif self.voteType == "skip":
-                            await self.updateSkipMessage("yes")
-                    elif reaction.emoji == '❌':
-                        print("X mark reaction detected")
-                        if self.voteType == "lynch":
-                            await self.updateLynchMessage("no")
-                        elif self.voteType == "skip":
-                            await self.updateSkipMessage("no")
+            if reaction.emoji == '✅':
+                print("Checkmark reaction detected")
+                if self.voteType == "lynch":
+                    await self.updateLynchMessage("yes")
+                elif self.voteType == "skip":
+                    await self.updateSkipMessage("yes")
+            elif reaction.emoji == '❌':
+                print("X mark reaction detected")
+                if self.voteType == "lynch":
+                    await self.updateLynchMessage("no")
+                elif self.voteType == "skip":
+                    await self.updateSkipMessage("no")
+
+    @commands.Cog.listener()
+    async def on_reaction_remove(self, reaction, user):
+        if not user.bot:
+            print("Reaction removal detected")
+            if reaction.emoji == '✅':
+                print("Checkmark reaction removal detected")
+                if self.voteType == "lynch":
+                    await self.updateLynchMessage("yes2")
+                elif self.voteType == "skip":
+                    await self.updateSkipMessage("yes2")
+            elif reaction.emoji == '❌':
+                print("X mark reaction removal detected")
+                if self.voteType == "lynch":
+                    await self.updateLynchMessage("no2")
+                elif self.voteType == "skip":
+                    await self.updateSkipMessage("no2")
 
 
 

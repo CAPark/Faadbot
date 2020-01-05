@@ -4,6 +4,9 @@ import math
 import random
 import re # used for multi-delimiter tokenizing
 
+import sys
+print(sys.path)
+
 class werewolfSQL:
     def __init__(self):
         self.dbPassLoc = "games/werewolfMod/localhostDBPW.txt"
