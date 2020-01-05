@@ -1,4 +1,4 @@
-# project-faadbot
+# Faadbot
 
 ## Operation and Requirements
 
