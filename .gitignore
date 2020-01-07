@@ -2,7 +2,7 @@ faadbotToken.txt
 .pyc
 __pycache__
 commandList.txt
-botCommands/__pycache__
-discordCommands/__pycache__
+botcommands/__pycache__
+discordcommands/__pycache__
 games/*.txt
-games/werewolfMod/*.txt
+games/werewolfmod/*.txt
